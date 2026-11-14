@@ -162,11 +162,32 @@ def run():
         actions = 0
         t0 = time.time()
         refreshed = False
-        while time.time() - t0 < 120 and actions < 16:
+        while time.time() - t0 < 300 and actions < 16:
             if ended(alice) or ended(bob):
                 break
             for pg in (alice, bob):
                 if my_turn(pg) and "שלוף" in pg.inner_text("#turnBanner"):
+                    if actions == 4:
+                        # pool button: the drawn tile is shown big in the middle, then lands on the rack
+                        pg.click("#poolBtn")
+                        wait_js(pg, "!!document.querySelector('.reveal')", timeout=8000)
+                        shot(pg, "09b_reveal")
+                        wait_js(pg, "!document.querySelector('.reveal') && document.querySelectorAll('#hand .card').length === 15", timeout=8000)
+                        # throw by dragging a tile to the middle of the table
+                        sb = pg.locator("#stage").bounding_box()
+                        drag(pg, "#hand .card >> nth=3", (sb["x"] + sb["width"] * 0.3, sb["y"] + sb["height"] * 0.6))
+                        wait_js(pg, "document.querySelectorAll('#hand .card').length === 14", timeout=10000)
+                        actions += 1; continue
+                    if actions == 8:
+                        # drag the open tile onto an empty slot at the right end of the bottom shelf
+                        top = pg.evaluate("window.__rummyDebug().pileTop")
+                        hb = pg.locator("#hand").bounding_box()
+                        drag(pg, "#pileBtn", (hb["x"] + hb["width"] - 25, hb["y"] + hb["height"] - 35))
+                        wait_js(pg, "document.querySelectorAll('#hand .card').length === 15", timeout=10000); time.sleep(0.4)
+                        tb = pg.locator(f"#hand .card[data-c='{top}']").bounding_box()
+                        assert tb and tb["x"] > hb["x"] + hb["width"] * 0.85 and tb["y"] > hb["y"] + hb["height"] / 2, f"open tile not where dropped {tb}"
+                        shot(pg, "09c_pile_dragged")
+                        play_turn_after_draw(pg); actions += 1; continue
                     if actions == 2:
                         pg.click("#deckBtn", force=True)
                         wait_js(pg, "document.querySelectorAll('#hand .card').length === 15", timeout=10000)
@@ -183,7 +204,9 @@ def run():
                 bob.reload(); bob.wait_for_selector("#game.show", timeout=15000)
                 wait_js(bob, "document.querySelectorAll('#hand .card').length > 0", timeout=20000); time.sleep(1)
                 after = bob.locator("#hand .card").count()
-                assert before == after, f"refresh changed hand {before} -> {after}"
+                gid_r = sql("select max(id) from rummy_games")
+                srv = int(sql(f"select cardinality(p.cards) from rummy_players p join rummy_profiles f on f.id=p.user_id where p.game_id={gid_r} and f.nickname like 'בוב%'"))
+                assert after == srv, f"after refresh the rack shows {after} tiles, server has {srv}"
                 shot(bob, "10_bob_after_refresh")
             time.sleep(0.6)
         print("online actions:", actions)
@@ -203,7 +226,7 @@ def run():
                 break
             time.sleep(1)
         winner_page = None
-        for _ in range(30):
+        for _ in range(80):
             for pg in (alice, bob):
                 if my_turn(pg) and "שלוף" in pg.inner_text("#turnBanner"):
                     pg.click("#deckBtn", force=True); time.sleep(1.5)
@@ -252,7 +275,7 @@ def run():
         shot(carol, "17_solo_game")
         moves = 0
         t0 = time.time()
-        while not ended(carol) and time.time() - t0 < 240:
+        while not ended(carol) and time.time() - t0 < 900:
             if my_turn(carol) and "שלוף" in carol.inner_text("#turnBanner"):
                 play_turn(carol); moves += 1
                 if moves == 2:

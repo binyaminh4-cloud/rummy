@@ -344,7 +344,7 @@ async function process(st) {
     return;
   }
   const entries = (st.log || []).filter((e) => e.n > lastSeq);
-  const fast = entries.length > 14 || document.hidden;
+  const fast = entries.length > 16 || document.hidden;
   for (const e of entries) {
     if (!fast) await animateEntry(e, st);
     lastSeq = Math.max(lastSeq, e.n);
@@ -353,8 +353,18 @@ async function process(st) {
   render(st, prev);
 }
 
+// bots (and players a bot is covering for) take about 5 seconds a turn, so a person has time to arrange his rack
+const BOT_THINK_DRAW = 2200, BOT_THINK_DISCARD = 1700;
+function isBotSeat(seat) { return G && seat != null && seat !== G.me && (G.bots[seat] || G.autos[seat]); }
+function showTurnOf(seat) {
+  if (!G || seat == null || seat === G.me) return;
+  const b = $('turnBanner'); b.textContent = `התור של ${G.names[seat]}`; b.classList.remove('mine');
+  for (const t of document.querySelectorAll('#tags .tag')) t.classList.toggle('turn', t.dataset.seat === String(seat));
+}
 async function animateEntry(e, st) {
   const r = e.seat != null ? rel(e.seat) : 0;
+  if (e.seat != null && e.seat !== G.me && (e.a === 'draw' || e.a === 'discard' || e.a === 'close')) showTurnOf(e.seat);
+  if (isBotSeat(e.seat)) await sleep(e.a === 'draw' ? BOT_THINK_DRAW : BOT_THINK_DISCARD);
   if (e.a === 'draw') {
     if (e.src === 'pile') { pileStack.pop(); if (T) T.drawPile(pileStack.at(-1), pileStack.length); }
     else { deckShown = Math.max(0, deckShown - 1); if (T) T.drawDeck(deckShown); }
@@ -365,7 +375,7 @@ async function animateEntry(e, st) {
     if (T) await T.flyDiscard(r, e.c); else await sleep(250);
     SFX.play('place');
     pileStack.push(e.c); if (T) T.drawPile(e.c, pileStack.length);
-    if (e.a === 'discard') await sleep(r === 0 ? 50 : 300);
+    if (e.a === 'discard') await sleep(r === 0 ? 50 : 250);
   } else if (e.a === 'reshuffle') {
     SFX.play('shuffle'); toast('הקופה נגמרה — האבנים שנזרקו עורבבו מחדש');
     pileStack = pileStack.slice(-1); deckShown = st.deck_count + 1; if (T) { T.drawDeck(deckShown); T.drawPile(pileStack.at(-1), 1); }
@@ -404,11 +414,15 @@ function render(st, prev) {
   const before = new Set(hand);
   syncSlots(server, !prev);
   newCards = new Set(prev ? server.filter((c) => !before.has(c)) : []);
+  const revealTile = revealNext && newCards.size === 1 ? [...newCards][0] : null;
+  if (newCards.size) revealNext = false;
   if (selected != null && !server.includes(selected)) selected = null;
   if (!(myTurn && st.phase === 'discard')) selected = null;
   renderHand();
+  if (revealTile != null) reveal(revealTile);
   // piles clickable
   const canDraw = myTurn && st.phase === 'draw' && !st.away;
+  $('poolBtn').disabled = !canDraw; $('poolBtn').classList.toggle('glow', canDraw);
   $('deckBtn').classList.toggle('can', canDraw);
   $('pileBtn').classList.toggle('can', canDraw && st.pile_top != null);
   $('closeBtn').classList.toggle('hidden', !(myTurn && st.phase === 'discard'));
@@ -434,7 +448,7 @@ function placeHud() {
   for (let s = 0; s < G.n; s++) {
     const r = rel(s); if (r === 0) continue;
     const pos = T ? T.seatScreen(r) : { x: (r / G.n) * innerWidth, y: 60 };
-    const el = document.createElement('div'); el.className = 'tag' + (G.turn === s && G.status === 'playing' ? ' turn' : '');
+    const el = document.createElement('div'); el.className = 'tag' + (G.turn === s && G.status === 'playing' ? ' turn' : ''); el.dataset.seat = s;
     el.appendChild(avatar(G.names[s], G.bots[s] || G.autos[s]));
     const nm = document.createElement('span'); nm.textContent = G.names[s]; el.appendChild(nm);
     const c = document.createElement('span'); c.className = 'cnt'; c.textContent = `${G.counts[s]} אבנים`; el.appendChild(c);
@@ -473,6 +487,8 @@ function tickTimer() {
 
 // ----- my rack: two rows of free slots, the player arranges every tile himself -----
 const COLS = 16, ROWS = 2, NSLOT = COLS * ROWS;
+let wantSlot = -1;          // slot chosen by dragging the open tile onto the rack
+let revealNext = false;     // show a tile drawn from the pool big in the middle first
 let slots = new Array(NSLOT).fill(null);   // tile id or null
 let dragging = false;
 let geom = { tw: 50, th: 66, gap: 4, padX: 10, padY: 8, rowH: 80 };
@@ -496,7 +512,8 @@ function syncSlots(server, fromStart) {
     missing.forEach((c, i) => { slots[i < COLS ? i : i] = c; });
   } else {
     for (const c of missing) {                      // a new tile: first free slot in the bottom row, else anywhere
-      let i = slots.findIndex((x, k) => x == null && k >= COLS);
+      let i = (wantSlot >= 0 && slots[wantSlot] == null) ? wantSlot : slots.findIndex((x, k) => x == null && k >= COLS);
+      wantSlot = -1;
       if (i < 0) i = slots.findIndex((x) => x == null);
       slots[i] = c;
     }
@@ -555,8 +572,8 @@ function slotXY(i) {
 function slotAt(px, py) {     // px, py relative to the rack
   const c = Math.round((px - geom.padX - geom.tw / 2) / (geom.tw + geom.gap));
   const r = Math.round((py - geom.padY - geom.th / 2) / geom.rowH);
-  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
-  return r * COLS + c;
+  if (px < 0 || py < -20 || px > geom.W + 10) return -1;
+  return Math.max(0, Math.min(ROWS - 1, r)) * COLS + Math.max(0, Math.min(COLS - 1, c));
 }
 
 function renderHand() {
@@ -605,9 +622,10 @@ function saveOrder() {
   orderTimer = setTimeout(() => { rpc('rummy_hand_order', { p_game: gameId, p_cards: hand }).catch(() => {}); }, 600);
 }
 
+// dropping a tile anywhere on the table (above the rack) throws it
 function overPile(x, y) {
-  const r = $('pileBtn').getBoundingClientRect();
-  return x > r.left - 30 && x < r.right + 30 && y > r.top - 30 && y < r.bottom + 30;
+  const top = $('handTools').getBoundingClientRect().top;
+  return y < top - 4;
 }
 
 function attachCard(el, c, from) {
@@ -664,13 +682,32 @@ async function act(fn, args) {
   catch (e) { toast(errText(e)); refresh(); }
   finally { acting = false; }
 }
+// the tile I just drew from the pool: big in the middle for a second, then it flies to its slot
+function reveal(c) {
+  const el = document.querySelector(`#hand .card[data-c="${c}"]`); if (!el) return;
+  el.style.visibility = 'hidden';
+  const big = document.createElement('div'); big.className = 'reveal';
+  big.style.backgroundImage = `url(${Cards.faceURL(c)})`;
+  document.body.appendChild(big);
+  requestAnimationFrame(() => big.classList.add('in'));
+  setTimeout(() => {
+    const r = el.getBoundingClientRect();
+    const b = big.getBoundingClientRect();
+    big.style.transition = 'transform .45s cubic-bezier(.3,.8,.3,1)';
+    big.style.transform = `translate(${r.left + r.width / 2 - (b.left + b.width / 2)}px, ${r.top + r.height / 2 - (b.top + b.height / 2)}px) scale(${r.width / b.width})`;
+    setTimeout(() => { big.remove(); el.style.visibility = ''; SFX.play('place'); }, 470);
+  }, 1000);
+}
+
 function draw(src) {
   SFX.unlock();
+  if (processing) { toast('רגע — עוד רואים את התור הקודם'); return; }
   if (!G || G.turn !== G.me || G.phase !== 'draw' || G.status !== 'playing') {
     if (G && G.status === 'playing') toast(G.turn !== G.me ? `עכשיו התור של ${G.names[G.turn]}` : 'כבר שלפת — עכשיו זורקים אבן');
     return;
   }
   if (src === 'pile' && G.pile_top == null) return;
+  revealNext = src === 'deck';
   act('rummy_draw', { p_src: src, p_seq: G.seq });
 }
 function discard(c) {
@@ -687,7 +724,40 @@ function closeHand() {
   act('rummy_close', { p_card: c, p_seq: G.seq });
 }
 $('deckBtn').onclick = () => draw('deck');
-$('pileBtn').onclick = () => draw('pile');
+let pileDragged = false;
+$('pileBtn').onclick = () => { if (pileDragged) { pileDragged = false; return; } draw('pile'); };
+$('poolBtn').onclick = () => draw('deck');
+(function pileDrag() {
+  const pb = $('pileBtn'); let pid = null, sx = 0, sy = 0, ghost = null;
+  pb.addEventListener('pointerdown', (ev) => {
+    if (!G || G.turn !== G.me || G.phase !== 'draw' || G.pile_top == null) return;
+    pid = ev.pointerId; sx = ev.clientX; sy = ev.clientY; pileDragged = false; pb.setPointerCapture(pid);
+  });
+  pb.addEventListener('pointermove', (ev) => {
+    if (pid !== ev.pointerId) return;
+    if (!ghost && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 8) {
+      pileDragged = true;
+      ghost = document.createElement('div'); ghost.className = 'card drag drag-ghost';
+      ghost.style.backgroundImage = `url(${Cards.faceURL(G.pile_top)})`; document.body.appendChild(ghost);
+      layoutRack();
+    }
+    if (ghost) { ghost.style.left = (ev.clientX - geom.tw / 2) + 'px'; ghost.style.top = (ev.clientY - geom.th / 2) + 'px'; }
+  });
+  const end = (ev) => {
+    if (pid !== ev.pointerId) return; pid = null;
+    if (!ghost) return;
+    ghost.remove(); ghost = null;
+    const hr = $('hand').getBoundingClientRect();
+    if (ev.clientY > hr.top - 10) {
+      const slot = slotAt(ev.clientX - hr.left, ev.clientY - hr.top);
+      wantSlot = slot >= 0 && slots[slot] == null ? slot : -1;
+      draw('pile');
+    }
+    setTimeout(() => { pileDragged = false; }, 50);
+  };
+  pb.addEventListener('pointerup', end);
+  pb.addEventListener('pointercancel', (ev) => { if (pid === ev.pointerId) { pid = null; if (ghost) { ghost.remove(); ghost = null; } } });
+})();
 $('discardBtn').onclick = () => { if (selected != null) discard(selected); };
 $('closeBtn').onclick = closeHand;
 function arrange(sorted, key) {
@@ -774,7 +844,7 @@ $('toLobbyBtn').onclick = async () => {
 };
 
 // small read-only view for tests and bug reports
-window.__rummyDebug = () => ({ seq: G && G.seq, turn: G && G.turn, me: G && G.me, phase: G && G.phase, acting, processing, lastSeq, hand: hand.length });
+window.__rummyDebug = () => ({ pileTop: G && G.pile_top, seq: G && G.seq, turn: G && G.turn, me: G && G.me, phase: G && G.phase, acting, processing, lastSeq, hand: hand.length });
 
 // ---------- start ----------
 (async function boot() {
