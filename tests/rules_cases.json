@@ -1,0 +1,112 @@
+[
+{
+"hand": "AS 2S 3S 4H 5H 6H 7H 8H 9D 10D JD QC KC AC",
+"win": true,
+"why": "runs incl. ace low and ace high"
+},
+{
+"hand": "7S 7H 7D 8S 8H 8D 8C KS KH KC 2D 3D 4D 5D",
+"win": true,
+"why": "sets of 3 and 4 plus run"
+},
+{
+"hand": "5S JK 7S 9H 9D 9C 2C 3C 4C 5C 6C QH QS QD",
+"win": true,
+"why": "joker inside run"
+},
+{
+"hand": "JK 5S 6S 7S 9H 9D 9C 2C 3C 4C 5C QH QS QD",
+"win": true,
+"why": "joker at run end"
+},
+{
+"hand": "JK JK 5S 6S 9H 9D 9C 2C 3C 4C 5C QH QS QD",
+"win": true,
+"why": "two jokers"
+},
+{
+"hand": "AH 2H 3H 4H 5H 6H 7H 8H 9H 10H JH QH KH AH",
+"win": true,
+"why": "A..6 low + 7..A high with second ace"
+},
+{
+"hand": "AS 2S 3S 4S 5S 6S 7S 8S 9S 10S JS QS KS JK",
+"win": true,
+"why": "13-card run plus joker"
+},
+{
+"hand": "7H 7H 7S 8S 8H 8D 8C KS KH KC 2D 3D 4D 5D",
+"win": false,
+"why": "7H twice in one set"
+},
+{
+"hand": "KS AS 2S 4H 5H 6H 9D 9C 9H JC JD JH QS QH",
+"win": false,
+"why": "K-A-2 wrap not allowed"
+},
+{
+"hand": "5S JK JK 9H 9D 9C 2C 3C 4C 5C QH QS QD KD",
+"win": false,
+"why": "meld with only one real card"
+},
+{
+"hand": "AS 2S 3S 4H 5H 6H 7H 9D 10D JD QC KC AC 5D",
+"win": false,
+"why": "one stray card"
+},
+{
+"hand": "2S 3H 4S 5D 6C 7S 8H 9D 10C JS QH KD AC 3D",
+"win": false,
+"why": "no melds"
+},
+{
+"hand": "2S 3S 4H 7S 7H 7D 8S 8H 8D 10C JC QC KC AC",
+"win": false,
+"why": "mixed-suit run"
+},
+{
+"hand": "9S 9H 9D 9C 9S 2H 3H 4H 6D 7D 8D JC QC KC",
+"win": false,
+"why": "set of 5"
+},
+{
+"hand": "JK JK JK JK 5S 6S 9H 9D 9C 2C 3C 4C QH QS",
+"win": true,
+"why": "four jokers spread"
+},
+{
+"hand": "5S 5H 6S 6H 7S 7H 8S 8H 9S 9H 10S 10H JS JH",
+"win": true,
+"why": "two parallel runs"
+},
+{
+"hand": "5S 5H 5D 6S 6H 6D 7S 7H 7D 8D 8C 9C 10C JC",
+"win": true,
+"why": "sets-or-runs grid"
+},
+{
+"hand": "5S 5H 5D 6S 6H 6D 7S 7H 7D 8C 8C 9C 10C JC",
+"win": false,
+"why": "duplicate 8C left over"
+},
+{
+"hand": "4H 5H 6H 5S 5D JK 9C 9D 9S 2S 3S 4S 10H 10H",
+"win": false,
+"why": "two identical 10H alone"
+},
+{
+"hand": "4H JK 6H 5H 5S 5D 9C 9D 9S 2S 3S 4S KC KD",
+"win": false,
+"why": "joker needed twice"
+},
+{
+"hand": "4H 6H 5H 5S 5D 5C 9C 9D 9S 2S 3S 4S KC JK",
+"win": false,
+"why": "KC + joker is only one real card"
+},
+{
+"hand": "4H 5H 6H 7H 8H 5S 5D 5C 2S 3S 4S KC KD JK",
+"win": true,
+"why": "joker completes KC KD"
+}
+]
