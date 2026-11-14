@@ -212,7 +212,16 @@ def run():
         print("online actions:", actions)
 
         # 3. force a winning hand for whoever is on turn to draw, then close
+        # (if the bot already won the online game, start another one first)
+        if sql("select status from rummy_games order by id desc limit 1") != "playing":
+            print("bot won the online game first — starting another one")
+            alice.wait_for_selector("#againBtn:not(.hidden)", timeout=20000); alice.click("#againBtn")
+            wait_js(alice, "document.getElementById('end').classList.contains('hidden')", timeout=15000)
+            wait_js(bob, "document.getElementById('end').classList.contains('hidden')", timeout=20000)
+            time.sleep(2)
         gid = sql("select max(id) from rummy_games")
+        # keep the bot from winning during this step
+        sql(f"update rummy_players set cards='{{3,17,31,45,59,73,87,101,7,21,35,49,63,77}}' where game_id={gid} and user_id is null")
         for _ in range(40):
             row = sql(f"select turn, phase, status from rummy_games where id={gid}")
             turn, phase, status = row.split("|")

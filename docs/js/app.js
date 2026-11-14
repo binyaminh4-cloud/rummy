@@ -795,7 +795,7 @@ $('menuClose').onclick = () => $('menu').classList.add('hidden');
 $('soundBtn').onclick = () => { $('soundBtn').textContent = 'צלילים: ' + (SFX.toggle() ? 'פועל' : 'כבוי'); };
 let quitArmed = false;
 $('quitBtn').onclick = async () => {
-  if (!quitArmed) { quitArmed = true; $('quitBtn').textContent = 'לחץ שוב כדי לצאת'; setTimeout(() => { quitArmed = false; $('quitBtn').textContent = 'יציאה מהמשחק (בוט ימשיך במקומך)'; }, 3000); return; }
+  if (!quitArmed) { quitArmed = true; $('quitBtn').textContent = 'לחץ שוב כדי לצאת'; setTimeout(() => { quitArmed = false; $('quitBtn').innerHTML = 'יציאה מהמשחק<small>בוט ימשיך במקומך</small>'; }, 3000); return; }
   quitArmed = false;
   try { await rpc('rummy_room_leave'); } catch (e) { /* ignore */ }
   $('menu').classList.add('hidden'); openLobby();

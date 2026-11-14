@@ -251,3 +251,23 @@ label { display: block; margin-bottom: 12px; font-weight: 600; }
 .room-panel > * { flex-shrink: 0; }
 #room .topbar > .btn { flex: none; }
 #room .topbar h2 { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 17px; }
+
+/* game menu: rules + buttons, two columns on wide/short screens */
+.menu-panel { width: min(760px, 100%) !important; }
+.menu-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.menu-btns { display: flex; flex-direction: column; gap: 8px; }
+.menu-btns small { display: block; font-size: 12px; font-weight: 600; opacity: .75; }
+@media (min-aspect-ratio: 4/3) {
+  .menu-grid { grid-template-columns: 1fr 210px; align-items: start; }
+}
+@media (max-height: 500px) {
+  #menu .panel { padding: 10px 14px; gap: 6px; }
+  #menu h2 { font-size: 17px; margin-bottom: 2px; }
+  .rules { font-size: 13px; line-height: 1.45; }
+  .menu-btns .btn { padding: 8px 10px; font-size: 15px; }
+  .end-panel { padding: 10px 14px; }
+  #endCrown { width: 58px; }
+  #endTitle { font-size: 24px; margin-bottom: 4px; }
+  #endMelds { margin: 6px 0 10px; gap: 8px; }
+  .meld img { width: 32px; height: 43px; }
+}

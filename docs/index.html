@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=7">
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js?v=170" } }
 </script>
@@ -124,16 +124,21 @@
   </div>
   <div id="rotate" class="overlay"><div>סובב את הטלפון לרוחב 🔄</div></div>
   <div id="menu" class="overlay hidden">
-    <div class="panel">
+    <div class="panel menu-panel">
       <h2>תפריט</h2>
-      <p class="rules">
-        <b>איך משחקים:</b> בכל תור שולפים אבן (מהקופה או את האבן הפתוחה שנזרקה אחרונה), מסדרים את הכן וזורקים אבן אחת — הזריקה מסיימת את התור.<br>
-        <b>מנצחים</b> כשכל 14 האבנים מסתדרות בקבוצות: <b>סדרה</b> — 3–4 אבנים באותו מספר בצבעים שונים, או <b>רצף</b> — 3 אבנים או יותר ברצף באותו צבע (1 עד 13, בלי המשך מ-13 ל-1). כשזה קורה כפתור <b>סגירה!</b> נדלק.<br>
-        ג'וקר מחליף כל אבן. בכל קבוצה לפחות 2 אבנים אמיתיות. אין הורדות לשולחן באמצע המשחק.
-      </p>
-      <button id="soundBtn" class="btn ghost">צלילים: פועל</button>
-      <button id="quitBtn" class="btn ghost">יציאה מהמשחק (בוט ימשיך במקומך)</button>
-      <button id="menuClose" class="btn gold">חזרה למשחק</button>
+      <div class="menu-grid">
+        <p class="rules">
+          <b>בכל תור:</b> שולפים אבן מהקופה או לוקחים את האבן הפתוחה, מסדרים את הכן, וזורקים אבן אחת. הזריקה מסיימת את התור.<br>
+          <b>סדרה:</b> 3–4 אבנים באותו מספר בצבעים שונים. <b>רצף:</b> 3+ אבנים ברצף באותו צבע (1 עד 13, בלי 13→1).<br>
+          <b>ניצחון:</b> כשכל 14 האבנים מסודרות בקבוצות — בוחרים את האבן לזריקה ולוחצים <b>סגירה!</b><br>
+          ג'וקר מחליף כל אבן (בכל קבוצה לפחות 2 אמיתיות). אין הורדות לשולחן.
+        </p>
+        <div class="menu-btns">
+          <button id="soundBtn" class="btn ghost">צלילים: פועל</button>
+          <button id="quitBtn" class="btn ghost">יציאה מהמשחק<small>בוט ימשיך במקומך</small></button>
+          <button id="menuClose" class="btn gold">חזרה למשחק</button>
+        </div>
+      </div>
     </div>
   </div>
   <div id="end" class="overlay hidden">
@@ -177,6 +182,6 @@
 <script src="js/config.js?v=1"></script>
 <script src="js/errors.js?v=1"></script>
 <script src="js/install.js?v=1"></script>
-<script type="module" src="js/app.js?v=7"></script>
+<script type="module" src="js/app.js?v=8"></script>
 </body>
 </html>
