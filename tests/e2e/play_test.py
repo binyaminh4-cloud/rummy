@@ -253,7 +253,9 @@ def run():
                         # the player builds the groups himself: sort by colour, check the green lines, pick the drawn tile, close
                         drawn = sql(f"select cards[15] from rummy_players p join rummy_games g on g.id=p.game_id and p.seat=g.turn where g.id={gid_now}")
                         pg.click("#sortSuit"); time.sleep(0.6)
-                        pg.locator(f"#hand .card[data-c='{drawn}']").click(); time.sleep(0.4)
+                        # move the extra tile away from every group, then just press "done" (no tile marked)
+                        hb = pg.locator("#hand").bounding_box()
+                        drag(pg, f"#hand .card[data-c='{drawn}']", (hb["x"] + hb["width"] - 25, hb["y"] + hb["height"] - 35)); time.sleep(0.4)
                         shot(pg, "11_close_ready"); pg.click("#closeBtn"); winner_page = pg
                     elif pg.locator("#hand .card").count() == 15:
                         play_turn_after_draw(pg)

@@ -13,7 +13,7 @@ const MSG = {
   room_full: 'השולחן מלא', room_playing: 'המשחק בשולחן הזה כבר התחיל', room_gone: 'השולחן כבר לא קיים',
   in_game: 'אתה באמצע משחק — חוזרים אליו', not_host: 'רק מי שפתח את השולחן יכול לעשות את זה',
   need_players: 'צריך לפחות 2 משתתפים (אפשר להוסיף בוט)', nick_taken: 'הכינוי הזה תפוס, בחר אחר',
-  bad_nick: 'כינוי צריך להיות 2–14 תווים', not_a_win: 'היד עדיין לא מסתדרת כולה', not_your_card: 'האבן הזאת לא אצלך',
+  bad_nick: 'כינוי צריך להיות 2–14 תווים', not_a_win: 'היד עדיין לא מסתדרת — בדוק את הקבוצות', not_your_card: 'האבן הזאת לא אצלך',
   pile_empty: 'הערימה ריקה', not_logged_in: 'צריך להתחבר מחדש', no_profile: 'צריך להתחבר מחדש',
   network: 'אין חיבור לשרת. בודקים שוב…',
 };
@@ -406,7 +406,7 @@ function render(st, prev) {
   // banner
   const b = $('turnBanner');
   if (st.status !== 'playing') b.textContent = 'המשחק נגמר';
-  else if (myTurn) b.textContent = st.phase === 'draw' ? 'התור שלך — שלוף אבן מהקופה או קח את האבן הפתוחה' : 'בחר אבן לזרוק — או סדר הכול וסגור';
+  else if (myTurn) b.textContent = st.phase === 'draw' ? 'התור שלך — שלוף אבן מהקופה או קח את האבן הפתוחה' : 'זרוק אבן — או סדר הכול ולחץ "סיימתי"';
   else b.textContent = `התור של ${st.names[st.turn]}`;
   b.classList.toggle('mine', myTurn);
   // timer
@@ -600,7 +600,7 @@ function renderHand() {
     if (c == null) return;
     const p = slotXY(i);
     const el = document.createElement('div');
-    el.className = 'card' + (c === selected ? ' sel' : '') + (newCards.has(c) ? ' new' : '');
+    el.className = 'card' + (c === selected ? ' sel' : '') + (newCards.has(c) ? ' new' : '') + (badFlash && badFlash.has(i) ? ' bad' : '');
     el.style.backgroundImage = `url(${Cards.faceURL(c)})`;
     el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
     el.dataset.c = c;
@@ -719,11 +719,26 @@ function discard(c) {
   hand = slots.filter((x) => x != null); renderHand();
   act('rummy_discard', { p_card: c, p_seq: G.seq });
 }
-// closing is the player's own call: he picks the tile to throw and says "close"; the server checks the other 14
+// "Done — check my hand": the player says he has finished. The tile to throw is the one he marked,
+// or the single tile left outside his groups. The server checks the other 14.
+let badFlash = null;
 function closeHand() {
-  if (!G || G.turn !== G.me || G.phase !== 'discard') return;
-  if (selected == null) { toast('בחר את האבן שאתה זורק, ואז לחץ סגירה'); return; }
-  const c = selected;
+  if (!G || G.status !== 'playing') return;
+  if (G.turn !== G.me) { toast('אפשר להגיש רק בתור שלך'); return; }
+  if (G.phase === 'draw') { toast('קודם שולפים אבן — ואז מגישים'); return; }
+  const groups = groupsOnRack();
+  const bad = groups.filter((g) => !validGroup(g.map((x) => x.t)));
+  let c = selected;
+  if (c == null) {
+    const loose = bad.flatMap((g) => g.map((x) => x.t));
+    if (loose.length === 1) c = loose[0];
+  }
+  if (c == null) {
+    badFlash = new Set(bad.flatMap((g) => g.map((x) => x.i))); renderHand();
+    setTimeout(() => { badFlash = null; renderHand(); }, 2500);
+    toast(bad.length ? 'הקבוצות המסומנות באדום עדיין לא תקינות — או סמן את האבן שאתה זורק' : 'סמן את האבן שאתה זורק ולחץ שוב');
+    return;
+  }
   act('rummy_close', { p_card: c, p_seq: G.seq });
 }
 $('deckBtn').onclick = () => draw('deck');

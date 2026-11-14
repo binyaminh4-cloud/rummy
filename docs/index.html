@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/style.css?v=10">
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js?v=170" } }
 </script>
@@ -117,7 +117,7 @@
         <button id="sortRank" class="btn ghost small">סדר לפי מספר</button>
         <button id="mineBtn" class="btn ghost small mine hidden">↩ הסידור שלי</button>
         <span class="tip">גרור אבנים לכל מקום בכן · קו ירוק = קבוצה תקינה</span>
-        <button id="closeBtn" class="btn gold hidden">סגירה!</button>
+        <button id="closeBtn" class="btn gold hidden">סיימתי — הגש לבדיקה</button>
       </div>
       <div id="hand"></div>
     </div>
@@ -131,7 +131,7 @@
         <p class="rules">
           <b>בכל תור:</b> שולפים אבן מהקופה או לוקחים את האבן הפתוחה, מסדרים את הכן, וזורקים אבן אחת. הזריקה מסיימת את התור.<br>
           <b>סדרה:</b> 3–4 אבנים באותו מספר בצבעים שונים. <b>רצף:</b> 3+ אבנים ברצף באותו צבע (1 עד 13, בלי 13→1).<br>
-          <b>ניצחון:</b> כשכל 14 האבנים מסודרות בקבוצות — בוחרים את האבן לזריקה ולוחצים <b>סגירה!</b><br>
+          <b>ניצחון:</b> כשכל 14 האבנים מסודרות בקבוצות — בוחרים את האבן לזריקה ולוחצים <b>סיימתי — הגש לבדיקה</b> (האבן שנשארה מחוץ לקבוצות נזרקת)<br>
           ג'וקר מחליף כל אבן (בכל קבוצה לפחות 2 אמיתיות). אין הורדות לשולחן.
         </p>
         <div class="menu-btns">
@@ -190,6 +190,6 @@
 <script src="js/config.js?v=1"></script>
 <script src="js/errors.js?v=1"></script>
 <script src="js/install.js?v=1"></script>
-<script type="module" src="js/app.js?v=10"></script>
+<script type="module" src="js/app.js?v=11"></script>
 </body>
 </html>

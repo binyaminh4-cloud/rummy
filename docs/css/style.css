@@ -298,3 +298,5 @@ label { display: block; margin-bottom: 12px; font-weight: 600; }
   .mini-group img { width: 26px; height: 35px; }
 }
 #mineBtn { border-color: #5fe0a4; color: #c9ffe6; }
+.card.bad { box-shadow: 0 0 0 3px #ff6a5a, 0 0 14px #ff6a5a, 0 3px 0 #c9b384 !important; }
+@media (max-height: 500px) { #closeBtn { font-size: 13px; padding: 6px 10px; } }
