@@ -209,3 +209,33 @@ label { display: block; margin-bottom: 12px; font-weight: 600; }
 .corner { left: max(10px, env(safe-area-inset-left)); }
 #clock { right: max(12px, env(safe-area-inset-right)); }
 #handWrap { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+
+/* phones in landscape (short screens): compact lobby so everything fits without scrolling */
+@media (max-height: 500px) {
+  .topbar { padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: 6px; }
+  .topbar .mini-logo { height: 34px; }
+  .avatar { width: 30px; height: 30px; }
+  .lobby-body { height: calc(100% - 50px); padding: 6px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left)); gap: 10px;
+    grid-template-columns: minmax(250px, 300px) 1fr; }
+  .lobby-body .panel { padding: 10px 12px; border-radius: 14px; }
+  .lobby-body h2 { font-size: 16px; margin-bottom: 6px; }
+  .create-panel { gap: 7px; max-height: 100%; overflow-y: auto; }
+  .create-panel input { padding: 7px 10px; font-size: 15px; margin-top: 0; }
+  .create-panel .seg button { padding: 6px 4px; font-size: 14px; }
+  .create-panel .hint { display: none; }
+  .create-panel .btn { padding: 9px; font-size: 16px; }
+  .wheel-row { font-size: 14px; }
+  .wheel { height: 75px; width: 116px; }
+  .wheel .pad { height: 25px; }
+  .wheel .opt { height: 25px; line-height: 25px; font-size: 14px; }
+  .wheel .opt.on { font-size: 16px; }
+  #secsWheel { box-shadow: inset 0 25px 0 -24px var(--line), inset 0 -25px 0 -24px var(--line); }
+  .rooms-panel { max-height: 100%; }
+  .room-card { padding: 8px 10px; }
+  .room-card .name { font-size: 15px; }
+  .empty { padding: 14px 8px; font-size: 14px; }
+  /* room screen */
+  .room-panel { margin: 6px auto; padding: 10px 12px; gap: 8px; max-height: calc(100% - 60px); }
+  .seat { min-height: 46px; padding: 7px 10px; }
+  #startBtn { padding: 10px; font-size: 17px; }
+}

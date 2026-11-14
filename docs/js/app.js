@@ -130,15 +130,16 @@ for (const b of document.querySelectorAll('#seatSeg button')) {
 let turnSecs = 30;
 const wheel = $('secsWheel');
 const wheelOpts = [...wheel.querySelectorAll('.opt')];
+const optH = () => wheelOpts[0].offsetHeight || 36;
 function wheelPick(i, smooth) {
   i = Math.max(0, Math.min(wheelOpts.length - 1, i));
   turnSecs = Number(wheelOpts[i].dataset.v);
   wheelOpts.forEach((o, k) => o.classList.toggle('on', k === i));
-  wheel.scrollTo({ top: i * 36, behavior: smooth ? 'smooth' : 'auto' });
+  wheel.scrollTo({ top: i * optH(), behavior: smooth ? 'smooth' : 'auto' });
 }
 let wheelT;
 wheel.addEventListener('scroll', () => {
-  const i = Math.round(wheel.scrollTop / 36);
+  const i = Math.round(wheel.scrollTop / optH());
   wheelOpts.forEach((o, k) => o.classList.toggle('on', k === i));
   clearTimeout(wheelT); wheelT = setTimeout(() => { turnSecs = Number(wheelOpts[Math.max(0, Math.min(5, i))].dataset.v); }, 80);
 });
@@ -181,7 +182,7 @@ async function loadLobby() {
 }
 $('createBtn').onclick = async () => {
   const b = $('createBtn'); b.disabled = true; SFX.unlock();
-  turnSecs = Number(wheelOpts[Math.max(0, Math.min(5, Math.round(wheel.scrollTop / 36)))].dataset.v) || turnSecs;
+  turnSecs = Number(wheelOpts[Math.max(0, Math.min(5, Math.round(wheel.scrollTop / optH())))].dataset.v) || turnSecs;
   try { localStorage.setItem('rummy_secs', String(turnSecs)); } catch (e) { /* ignore */ }
   try { const id = await rpc('rummy_room_create', { p_name: $('roomName').value, p_max: seats, p_secs: turnSecs }); $('roomName').value = ''; openRoom(id); }
   catch (e) { toast(errText(e)); if (e.code === 'in_game') route(); }
