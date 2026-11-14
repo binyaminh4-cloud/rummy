@@ -157,6 +157,14 @@ def run():
         wait_js(alice, "document.querySelectorAll('#hand .card').length > 0", timeout=20000); time.sleep(0.8)
         nb2 = alice.locator(f"#hand .card[data-c='{first}']").bounding_box()
         assert abs(nb2["x"] - nb["x"]) < 4 and abs(nb2["y"] - nb["y"]) < 4, "rack layout lost after refresh"
+        # sort by colour, then "my arrangement" brings the tile back to where I put it
+        alice.click("#sortSuit"); time.sleep(0.5)
+        assert alice.is_visible("#mineBtn"), "my-arrangement button missing after sort"
+        moved = alice.locator(f"#hand .card[data-c='{first}']").bounding_box()
+        alice.click("#mineBtn"); time.sleep(0.5)
+        back = alice.locator(f"#hand .card[data-c='{first}']").bounding_box()
+        assert abs(back["x"] - nb["x"]) < 4 and abs(back["y"] - nb["y"]) < 4, f"not restored {back} vs {nb} (sorted at {moved})"
+        assert not alice.is_visible("#mineBtn"), "button should hide after restoring"
 
         # 2. play some turns online
         actions = 0

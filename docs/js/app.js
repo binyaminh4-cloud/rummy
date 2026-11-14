@@ -301,7 +301,9 @@ async function openGame(gid) {
   clearScreenWork(); show('game');
   $('end').classList.add('hidden'); $('menu').classList.add('hidden');
   if (endRoomPoll) { clearInterval(endRoomPoll); endRoomPoll = null; }
-  gameId = gid; G = null; lastSeq = -1; hand = []; slots = new Array(NSLOT).fill(null); newCards.clear(); selected = null; pileStack = []; tickedFor = 0;
+  gameId = gid; G = null; lastSeq = -1; hand = []; slots = new Array(NSLOT).fill(null);
+  try { myLayout = JSON.parse(localStorage.getItem('rummy_mine_' + gid) || 'null'); } catch (e) { myLayout = null; }
+  $('mineBtn').classList.toggle('hidden', !myLayout); newCards.clear(); selected = null; pileStack = []; tickedFor = 0;
   $('hand').innerHTML = ''; $('tags').innerHTML = ''; $('turnBanner').textContent = 'טוען את השולחן…';
   await ensureTable();
   await refresh();
@@ -655,6 +657,7 @@ function attachCard(el, c, from) {
     if (to >= 0 && to !== from) {
       const other = slots[to];
       slots[to] = c; slots[from] = other;          // empty slot: move; full slot: swap
+      if (myLayout) forgetMine();
       SFX.play('click'); saveOrder();
     }
     renderHand();
@@ -760,7 +763,29 @@ $('poolBtn').onclick = () => draw('deck');
 })();
 $('discardBtn').onclick = () => { if (selected != null) discard(selected); };
 $('closeBtn').onclick = closeHand;
+// "my arrangement": what the player built himself before pressing a sort button
+let myLayout = null;
+function myKey() { return 'rummy_mine_' + gameId; }
+function rememberMine() {
+  if (myLayout) return;                       // already saved since the last manual change
+  myLayout = slots.slice();
+  try { localStorage.setItem(myKey(), JSON.stringify(myLayout)); } catch (e) { /* ignore */ }
+  $('mineBtn').classList.remove('hidden');
+}
+function forgetMine() { myLayout = null; try { localStorage.removeItem(myKey()); } catch (e) { /* ignore */ } $('mineBtn').classList.add('hidden'); }
+function restoreMine() {
+  if (!myLayout) return;
+  const have = new Set(hand), out = new Array(NSLOT).fill(null), placed = new Set();
+  myLayout.forEach((c, i) => { if (c != null && have.has(c) && !placed.has(c)) { out[i] = c; placed.add(c); } });
+  for (const c of hand) if (!placed.has(c)) {          // tiles drawn since then: first free slot in the bottom row
+    let i = out.findIndex((x, k) => x == null && k >= COLS); if (i < 0) i = out.indexOf(null); out[i] = c;
+  }
+  slots = out; selected = null; forgetMine(); saveOrder(); renderHand(); SFX.play('click');
+}
+$('mineBtn').onclick = restoreMine;
+
 function arrange(sorted, key) {
+  rememberMine();
   // groups of the same colour / number stay together on one shelf, with an empty slot between groups
   const groups = [];
   for (const c of sorted) {

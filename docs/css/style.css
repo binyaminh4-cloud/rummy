@@ -297,3 +297,4 @@ label { display: block; margin-bottom: 12px; font-weight: 600; }
   .rack-row .avatar { width: 24px; height: 24px; font-size: 12px; }
   .mini-group img { width: 26px; height: 35px; }
 }
+#mineBtn { border-color: #5fe0a4; color: #c9ffe6; }
