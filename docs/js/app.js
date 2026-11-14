@@ -533,7 +533,10 @@ function validGroup(ts) {
 }
 
 function layoutRack() {
-  const W = Math.min(innerWidth - 16, 1200);
+  // the real room inside the rack area (phones in landscape keep space for the notch on both sides)
+  const hw = $('handWrap'), cs = getComputedStyle(hw);
+  const inner = hw.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+  const W = Math.min((inner > 100 ? inner : innerWidth - 16), 1200);
   const gap = Math.max(3, Math.round(W / 250));
   let tw = Math.floor((W - 20 - gap * (COLS - 1)) / COLS);
   const maxTh = Math.floor((innerHeight * (innerHeight < 500 ? 0.47 : 0.42) - 34) / ROWS) - 14;   // rack ≈ 45% of the screen height
