@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=8">
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js?v=170" } }
 </script>
@@ -141,6 +141,13 @@
       </div>
     </div>
   </div>
+  <div id="racks" class="overlay hidden">
+    <div class="panel racks-panel">
+      <h2 id="racksTitle">סוף הסיבוב — הכנים של כולם</h2>
+      <div id="racksList"></div>
+      <div class="racks-bar"><i></i></div>
+    </div>
+  </div>
   <div id="end" class="overlay hidden">
     <div class="panel end-panel">
       <img id="endCrown" src="assets/img/crown.webp" alt="">
@@ -182,6 +189,6 @@
 <script src="js/config.js?v=1"></script>
 <script src="js/errors.js?v=1"></script>
 <script src="js/install.js?v=1"></script>
-<script type="module" src="js/app.js?v=8"></script>
+<script type="module" src="js/app.js?v=9"></script>
 </body>
 </html>

@@ -803,11 +803,49 @@ $('quitBtn').onclick = async () => {
 
 // end of game
 let endShownFor = null;
+// end of the round: everybody's rack for 5 seconds, names beside them, the winner's rack highlighted
+function showRacks(st) {
+  return new Promise((done) => {
+    const hands = st.all_hands; if (!hands || !hands.length) { done(); return; }
+    const list = $('racksList'); list.innerHTML = '';
+    const order = [...Array(st.n).keys()].sort((a, b) => (b === st.winner) - (a === st.winner));
+    for (const s of order) {
+      const row = document.createElement('div'); row.className = 'rack-row' + (s === st.winner ? ' win' : '');
+      const who = document.createElement('div'); who.className = 'who';
+      who.appendChild(avatar(st.names[s], st.bots[s]));
+      const nm = document.createElement('span'); nm.textContent = st.names[s] + (s === st.me ? ' (אתה)' : ''); who.appendChild(nm);
+      if (s === st.winner) { const c = document.createElement('img'); c.src = 'assets/img/crown.webp'; c.className = 'crown'; who.appendChild(c); }
+      row.appendChild(who);
+      const tiles = document.createElement('div'); tiles.className = 'mini-rack';
+      // winner: his groups with a gap between them; me: my own arrangement; others: as they hold them
+      let groups;
+      if (s === st.winner && st.winner_melds) groups = st.winner_melds;
+      else if (s === st.me && slots.some((x) => x != null)) groups = groupsOnRack().map((g) => g.map((x) => x.t));
+      else groups = [hands[s]];
+      for (const g of groups) {
+        const gEl = document.createElement('div'); gEl.className = 'mini-group';
+        for (const c of g) { const im = document.createElement('img'); im.src = Cards.faceURL(c); gEl.appendChild(im); }
+        tiles.appendChild(gEl);
+      }
+      row.appendChild(tiles); list.appendChild(row);
+    }
+    $('racksTitle').textContent = st.winner == null ? 'תיקו — הכנים של כולם' : `${st.names[st.winner]} סגר! — הכנים של כולם`;
+    const bar = document.querySelector('.racks-bar i');
+    bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
+    $('racks').classList.remove('hidden');
+    requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = 'transform 5s linear'; bar.style.transform = 'scaleX(0)'; }));
+    const finish = () => { $('racks').classList.add('hidden'); done(); };
+    const t = setTimeout(finish, 5000);
+    $('racks').onclick = () => { clearTimeout(t); finish(); };          // a tap skips ahead
+  });
+}
+
 async function showEnd(st) {
   if (endShownFor === st.id) return; endShownFor = st.id;
+  if (st.winner != null) SFX.play('win');
+  await showRacks(st);
   $('turnBanner').textContent = 'המשחק נגמר';
   const win = st.winner != null;
-  if (win) SFX.play('win');
   $('endCrown').classList.toggle('hidden', !win);
   $('endTitle').textContent = !win ? (st.ended_reason === 'draw' ? 'תיקו — הקופה נגמרה 3 פעמים' : 'המשחק הסתיים')
     : st.winner === st.me ? 'ניצחת!' : `${st.names[st.winner]} ניצח/ה!`;

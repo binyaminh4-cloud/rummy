@@ -253,6 +253,10 @@ def run():
                 break
             time.sleep(0.8)
         assert winner_page, "close button never appeared"
+        winner_page.wait_for_selector("#racks:not(.hidden)", timeout=15000); time.sleep(1.5)
+        assert winner_page.locator("#racks .rack-row").count() == 3, "all racks shown"
+        assert winner_page.locator("#racks .rack-row.win").count() == 1, "winner rack highlighted"
+        shot(winner_page, "11b_all_racks")
         winner_page.wait_for_selector("#end:not(.hidden)", timeout=15000); time.sleep(1)
         shot(winner_page, "12_end_winner")
         other = bob if winner_page is alice else alice
