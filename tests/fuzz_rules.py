@@ -26,15 +26,15 @@ def melds_possible(cards):
                     for x in ch: rem.remove(x)
                     if solve(tuple(rem), j-jn): return True
         # runs: any window [lo,hi] of values (1..14, ace 1 or 14) containing c's value
-        for v in ([1,14] if k==1 else [k]):
-            for lo in range(1 if v!=14 else 2, v+1):
-                for hi in range(max(v,lo+2), (13 if v==1 else 14)+1):
+        for v in [k]:
+            for lo in range(1, v+1):
+                for hi in range(max(v,lo+2), 14):
                     # choose for each position real-or-joker, all combos
                     pos=[p for p in range(lo,hi+1) if p!=v]
                     def rec(i, rem, jj, nreal):
                         if i==len(pos):
                             return nreal>=2 and solve(tuple(rem), jj)
-                        p=pos[i]; rk=1 if p==14 else p
+                        p=pos[i]; rk=p
                         cand=[x for x in rem if suit(x)==s and rank(x)==rk]
                         if cand:
                             r2=list(rem); r2.remove(cand[0])
@@ -54,17 +54,17 @@ for _ in range(int(sys.argv[2]) if len(sys.argv)>2 else 3000):
     while len(h)<14:
         t=random.random()
         if t<0.45:
-            s=random.randrange(4); lo=random.randint(1,12); L=random.randint(3,5)
-            for p in range(lo,min(lo+L,15)):
-                rk=1 if p==14 else p; h.append(random.randrange(2)*52+s*13+rk-1)
+            s=random.randrange(4); lo=random.randint(1,11); L=random.randint(3,5)
+            for p in range(lo,min(lo+L,14)):
+                rk=p; h.append(random.randrange(2)*52+s*13+rk-1)
         elif t<0.9:
             rk=random.randint(1,13); ss=random.sample(range(4),random.randint(3,4))
             for s in ss: h.append(random.randrange(2)*52+s*13+rk-1)
         else:
-            h.append(random.randint(104,107))
+            h.append(random.randint(104,105))
     h=h[:14]
     for _ in range(random.randint(0,2)):
-        h[random.randrange(14)]=random.randrange(108)
+        h[random.randrange(14)]=random.randrange(106)
     # jokers and duplicates must be legal: at most 2 copies of a card, 4 jokers distinct
     from collections import Counter
     cnt=Counter(h)
@@ -73,7 +73,7 @@ for _ in range(int(sys.argv[2]) if len(sys.argv)>2 else 3000):
     phys=[]; seen=Counter(); jk=104; okh=True
     for x in h:
         if x>=104:
-            if jk>107: okh=False; break
+            if jk>105: okh=False; break
             phys.append(jk); jk+=1; continue
         b=x%52; seen[b]+=1
         if seen[b]>2: okh=False; break

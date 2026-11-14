@@ -1,10 +1,10 @@
 import json, subprocess, sys
-S="SHDC"; R={"A":1,"J":11,"Q":12,"K":13}
+S="RBOK"
 def ids(hand):
     used=set(); out=[]; jk=104
     for t in hand.split():
         if t=="JK": out.append(jk); jk+=1; continue
-        r=R.get(t[:-1]) or int(t[:-1]); s=S.index(t[-1])
+        r=int(t[:-1]); s=S.index(t[-1])
         base=s*13+r-1
         cid=base if base not in used else base+52
         used.add(cid); out.append(cid)

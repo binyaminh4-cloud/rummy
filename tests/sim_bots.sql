@@ -19,7 +19,7 @@ begin
     -- invariants: 108 cards exactly, no duplicates
     select (select count(*) from rummy_players p, unnest(p.cards) where p.game_id = gid)
          + cardinality(g.pile) + (select cardinality(deck) from rummy_secret where game_id = gid) into total;
-    if total <> 108 or exists (select x from (select unnest(cards) x from rummy_players where game_id = gid
+    if total <> 106 or exists (select x from (select unnest(cards) x from rummy_players where game_id = gid
                        union all select unnest(g.pile) union all select unnest(deck) from rummy_secret where game_id = gid) z
                        group by x having count(*) > 1) then bad := bad + 1; end if;
     if g.ended_reason = 'win' then

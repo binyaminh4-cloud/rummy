@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0d1f17">
+<title>רמי אבנים</title>
+<link rel="icon" href="assets/img/logo_emblem.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js?v=170" } }
+</script>
+</head>
+<body>
+
+<!-- loading -->
+<section id="boot" class="screen show">
+  <img class="boot-logo" src="assets/img/logo_emblem.webp" alt="">
+  <div class="boot-title">רמי</div>
+  <div class="spinner"></div>
+  <div id="bootMsg" class="boot-msg">טוען…</div>
+  <button id="bootReload" class="btn ghost hidden" onclick="location.reload()">רענון</button>
+</section>
+
+<!-- login -->
+<section id="login" class="screen">
+  <div class="panel login-panel">
+    <img class="logo" src="assets/img/logo_emblem.webp" alt="">
+    <h1>רמי</h1>
+    <p class="sub">רמי אבנים בלי הורדות · עד 4 שחקנים · ברשת או נגד בוטים</p>
+    <form id="loginForm" autocomplete="on" onsubmit="return false">
+      <label>כינוי
+        <input id="nick" name="username" maxlength="14" autocomplete="username" placeholder="איך יקראו לך במשחק" required>
+      </label>
+      <label>סיסמה
+        <input id="pass" name="password" type="password" minlength="6" autocomplete="current-password" placeholder="6 תווים לפחות" required>
+      </label>
+      <button id="loginBtn" class="btn gold big" type="submit">כניסה</button>
+      <div id="loginErr" class="err"></div>
+      <p class="hint">פעם ראשונה? פשוט בחר כינוי וסיסמה — נרשמים אוטומטית.</p>
+    </form>
+  </div>
+</section>
+
+<!-- lobby -->
+<section id="lobby" class="screen">
+  <header class="topbar">
+    <div class="me"><span id="meAvatar" class="avatar"></span><b id="meName"></b><span id="meStats" class="muted"></span></div>
+    <img class="mini-logo" src="assets/img/logo_emblem.webp" alt="">
+    <button id="logoutBtn" class="btn ghost small">יציאה</button>
+  </header>
+  <div class="lobby-body">
+    <div class="panel create-panel">
+      <h2>שולחן חדש</h2>
+      <input id="roomName" maxlength="24" placeholder="שם השולחן (לא חובה)">
+      <div class="seg" id="seatSeg">
+        <button data-n="2">2 שחקנים</button><button data-n="3">3</button><button data-n="4" class="on">4</button>
+      </div>
+      <div class="wheel-row">
+        <span>זמן לכל תור</span>
+        <div class="wheel" id="secsWheel" aria-label="זמן לכל תור">
+          <div class="pad"></div>
+          <div class="opt" data-v="10">10 שניות</div><div class="opt" data-v="20">20 שניות</div><div class="opt" data-v="30">30 שניות</div>
+          <div class="opt" data-v="40">40 שניות</div><div class="opt" data-v="50">50 שניות</div><div class="opt" data-v="60">60 שניות</div>
+          <div class="pad"></div>
+        </div>
+      </div>
+      <button id="createBtn" class="btn gold">צור שולחן</button>
+      <p class="hint">אפשר למלא מקומות ריקים בבוטים.</p>
+    </div>
+    <div class="panel rooms-panel">
+      <h2>שולחנות פתוחים</h2>
+      <div id="roomList" class="room-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- room -->
+<section id="room" class="screen">
+  <header class="topbar">
+    <button id="leaveRoomBtn" class="btn ghost small">יציאה מהשולחן</button>
+    <h2 id="roomTitle"></h2>
+    <button id="shareBtn" class="btn ghost small">הזמן חבר</button>
+  </header>
+  <div class="panel room-panel">
+    <div id="roomStatus" class="status-line"></div>
+    <div id="seatList" class="seat-list"></div>
+    <button id="startBtn" class="btn gold big">התחל משחק</button>
+    <div id="waitHost" class="muted center">ממתינים שהמארח יתחיל את המשחק…</div>
+  </div>
+</section>
+
+<!-- game -->
+<section id="game" class="screen">
+  <div id="stage"></div>
+  <div id="hud">
+    <div id="timerBar"><i></i></div>
+    <div id="turnBanner"></div>
+    <div id="clock"></div>
+    <div id="tags"></div>
+    <button id="deckBtn" class="pile-hot" aria-label="קופה"><span id="deckCount"></span></button>
+    <button id="pileBtn" class="pile-hot" aria-label="אבן פתוחה"></button>
+    <div id="awayBar" class="hidden">בוט משחק במקומך <button id="resumeBtn" class="btn gold small">חזרתי</button></div>
+    <button id="menuBtn" class="btn ghost small corner">תפריט</button>
+    <div id="handWrap">
+      <div id="handTools">
+        <button id="sortSuit" class="btn ghost small">סדר לפי צבע</button>
+        <button id="sortRank" class="btn ghost small">סדר לפי מספר</button>
+        <button id="closeBtn" class="btn gold glow hidden">סגירה!</button>
+      </div>
+      <div id="hand"></div>
+      <button id="discardBtn" class="btn gold small hidden">זרוק</button>
+    </div>
+  </div>
+  <div id="rotate" class="overlay"><div>סובב את הטלפון לרוחב 🔄</div></div>
+  <div id="menu" class="overlay hidden">
+    <div class="panel">
+      <h2>תפריט</h2>
+      <p class="rules">
+        <b>איך משחקים:</b> בכל תור שולפים אבן (מהקופה או את האבן הפתוחה שנזרקה אחרונה), מסדרים את הכן וזורקים אבן אחת — הזריקה מסיימת את התור.<br>
+        <b>מנצחים</b> כשכל 14 האבנים מסתדרות בקבוצות: <b>סדרה</b> — 3–4 אבנים באותו מספר בצבעים שונים, או <b>רצף</b> — 3 אבנים או יותר ברצף באותו צבע (1 עד 13, בלי המשך מ-13 ל-1). כשזה קורה כפתור <b>סגירה!</b> נדלק.<br>
+        ג'וקר מחליף כל אבן. בכל קבוצה לפחות 2 אבנים אמיתיות. אין הורדות לשולחן באמצע המשחק.
+      </p>
+      <button id="soundBtn" class="btn ghost">צלילים: פועל</button>
+      <button id="quitBtn" class="btn ghost">יציאה מהמשחק (בוט ימשיך במקומך)</button>
+      <button id="menuClose" class="btn gold">חזרה למשחק</button>
+    </div>
+  </div>
+  <div id="end" class="overlay hidden">
+    <div class="panel end-panel">
+      <img id="endCrown" src="assets/img/crown.webp" alt="">
+      <h1 id="endTitle"></h1>
+      <div id="endMelds"></div>
+      <div class="row">
+        <button id="againBtn" class="btn gold">משחק נוסף</button>
+        <button id="toLobbyBtn" class="btn ghost">חזרה ללובי</button>
+      </div>
+      <div id="againWait" class="muted center hidden">המארח יכול להתחיל משחק נוסף…</div>
+    </div>
+  </div>
+</section>
+
+<div id="toast"></div>
+
+<script>
+  // If the main code does not start (old phone, network), never leave a dead screen.
+  setTimeout(function () {
+    if (!window.__rummyReady) {
+      document.getElementById('bootMsg').textContent = 'הטעינה נתקעה. בדוק חיבור ונסה לרענן.';
+      document.getElementById('bootReload').classList.remove('hidden');
+    }
+  }, 12000);
+</script>
+<script src="vendor/supabase.js?v=2.45.4"></script>
+<script src="js/config.js?v=1"></script>
+<script src="js/errors.js?v=1"></script>
+<script type="module" src="js/app.js?v=1"></script>
+</body>
+</html>
