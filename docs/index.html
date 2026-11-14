@@ -5,10 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0d1f17">
 <title>רמי אבנים</title>
-<link rel="icon" href="assets/img/logo_emblem.webp">
+<link rel="icon" href="assets/icons/favicon-64.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="רמי">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=3">
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js?v=170" } }
 </script>
@@ -143,6 +149,18 @@
   </div>
 </section>
 
+<!-- "add to home screen" — required on phones -->
+<div id="install" class="overlay hidden">
+  <div class="panel install-panel">
+    <img class="install-icon" src="assets/icons/icon-192.png" alt="">
+    <h2>מוסיפים את רמי למסך הבית</h2>
+    <p class="muted">ככה המשחק נפתח במסך מלא, בלי שורת הכתובת — נראה ומרגיש כמו אפליקציה.</p>
+    <div id="installSteps"></div>
+    <button id="installBtn" class="btn gold big hidden">הוסף למסך הבית</button>
+    <button id="installSkip" class="link hidden">המשך בדפדפן בכל זאת</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -157,6 +175,7 @@
 <script src="vendor/supabase.js?v=2.45.4"></script>
 <script src="js/config.js?v=1"></script>
 <script src="js/errors.js?v=1"></script>
-<script type="module" src="js/app.js?v=2"></script>
+<script src="js/install.js?v=1"></script>
+<script type="module" src="js/app.js?v=3"></script>
 </body>
 </html>
