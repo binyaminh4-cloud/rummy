@@ -283,7 +283,7 @@ async function ensureTable() {
     tablePromise = (async () => {
       try {
         await imagesReady;
-        const mod = await import('./table3d.js?v=1');
+        const mod = await import('./table3d.js?v=2');
         T = await mod.createTable($('stage'));
       } catch (e) {
         window.rummyReport && window.rummyReport('3d failed: ' + e.message, e.stack);
@@ -300,7 +300,7 @@ async function openGame(gid) {
   clearScreenWork(); show('game');
   $('end').classList.add('hidden'); $('menu').classList.add('hidden');
   if (endRoomPoll) { clearInterval(endRoomPoll); endRoomPoll = null; }
-  gameId = gid; G = null; lastSeq = -1; hand = []; newCards.clear(); selected = null; pileStack = []; tickedFor = 0;
+  gameId = gid; G = null; lastSeq = -1; hand = []; slots = new Array(NSLOT).fill(null); newCards.clear(); selected = null; pileStack = []; tickedFor = 0;
   $('hand').innerHTML = ''; $('tags').innerHTML = ''; $('turnBanner').textContent = 'טוען את השולחן…';
   await ensureTable();
   await refresh();
@@ -393,29 +393,24 @@ function render(st, prev) {
   // banner
   const b = $('turnBanner');
   if (st.status !== 'playing') b.textContent = 'המשחק נגמר';
-  else if (myTurn) b.textContent = st.phase === 'draw' ? 'התור שלך — שלוף אבן מהקופה או קח את האבן הפתוחה' : (st.close_card != null ? 'יש לך יד מנצחת! לחץ סגירה' : 'בחר אבן לזרוק (לחיצה כפולה זורקת)');
+  else if (myTurn) b.textContent = st.phase === 'draw' ? 'התור שלך — שלוף אבן מהקופה או קח את האבן הפתוחה' : 'בחר אבן לזרוק — או סדר הכול וסגור';
   else b.textContent = `התור של ${st.names[st.turn]}`;
   b.classList.toggle('mine', myTurn);
   // timer
   deadlineAt = st.deadline_ms != null ? Date.now() + st.deadline_ms : 0;
-  // hand: keep my local order when the cards are the same
+  // rack: keep my own arrangement; new tiles go to a free slot
   const server = st.hand || [];
-  const same = server.length === hand.length && [...server].sort().join() === [...hand].sort().join();
-  if (!same) {
-    const known = new Set(hand);
-    const added = server.filter((c) => !known.has(c));
-    const kept = hand.filter((c) => server.includes(c));
-    hand = kept.length ? kept.concat(added) : server.slice();
-    newCards = new Set(prev ? added : []);
-    if (selected != null && !server.includes(selected)) selected = null;
-  }
+  const before = new Set(hand);
+  syncSlots(server, !prev);
+  newCards = new Set(prev ? server.filter((c) => !before.has(c)) : []);
+  if (selected != null && !server.includes(selected)) selected = null;
   if (!(myTurn && st.phase === 'discard')) selected = null;
   renderHand();
   // piles clickable
   const canDraw = myTurn && st.phase === 'draw' && !st.away;
   $('deckBtn').classList.toggle('can', canDraw);
   $('pileBtn').classList.toggle('can', canDraw && st.pile_top != null);
-  $('closeBtn').classList.toggle('hidden', !(myTurn && st.phase === 'discard' && st.close_card != null));
+  $('closeBtn').classList.toggle('hidden', !(myTurn && st.phase === 'discard'));
   $('awayBar').classList.toggle('hidden', !st.away || st.status !== 'playing');
   placeHud();
   // end
@@ -443,7 +438,18 @@ function placeHud() {
     const nm = document.createElement('span'); nm.textContent = G.names[s]; el.appendChild(nm);
     const c = document.createElement('span'); c.className = 'cnt'; c.textContent = `${G.counts[s]} אבנים`; el.appendChild(c);
     if (G.online && !G.online[s]) { const o = document.createElement('i'); o.className = 'off'; o.title = 'לא מחובר'; el.appendChild(o); }
-    el.style.left = pos.x + 'px'; el.style.top = Math.max(60, pos.y) + 'px';
+    let x = pos.x, y = Math.max(56, pos.y);
+    // keep name tags off the pool and the open tile
+    if (T) {
+      const d = T.deckScreen(), p = T.pileScreen();
+      if (y > Math.min(d.y, p.y) - 70 && y < Math.max(d.y, p.y) + 60 && x > d.x - 110 && x < p.x + 110) {
+        // move it up next to the turn banner (between the menu button and the banner)
+        const bl = $('turnBanner').getBoundingClientRect(), mb = $('menuBtn').getBoundingClientRect();
+        x = (mb.right + bl.left) / 2; y = bl.top + bl.height / 2;
+        if (bl.left - mb.right < 150) { x = d.x - 150; y = Math.max(56, pos.y); }
+      }
+    }
+    el.style.left = Math.max(60, Math.min(innerWidth - 60, x)) + 'px'; el.style.top = y + 'px';
     tags.appendChild(el);
   }
 }
@@ -464,64 +470,172 @@ function tickTimer() {
   }
 }
 
-// ----- my hand -----
+// ----- my rack: two rows of free slots, the player arranges every tile himself -----
+const COLS = 16, ROWS = 2, NSLOT = COLS * ROWS;
+let slots = new Array(NSLOT).fill(null);   // tile id or null
 let dragging = false;
+let geom = { tw: 50, th: 66, gap: 4, padX: 10, padY: 8, rowH: 80 };
+
+function rackKey() { return 'rummy_rack_' + gameId; }
+function saveRackLocal() { try { localStorage.setItem(rackKey(), JSON.stringify(slots)); } catch (e) { /* ignore */ } }
+function loadRackLocal() {
+  try { const a = JSON.parse(localStorage.getItem(rackKey()) || 'null'); if (Array.isArray(a) && a.length === NSLOT) return a; } catch (e) { /* ignore */ }
+  return null;
+}
+// keep the slots in step with the tiles the server says I hold
+function syncSlots(server, fromStart) {
+  if (fromStart) { const saved = loadRackLocal(); slots = saved || new Array(NSLOT).fill(null); }
+  const have = new Set(server);
+  for (let i = 0; i < NSLOT; i++) if (slots[i] != null && !have.has(slots[i])) slots[i] = null;
+  // a tile may appear in two slots only by a bug; keep the first
+  const seen = new Set();
+  for (let i = 0; i < NSLOT; i++) { if (slots[i] != null) { if (seen.has(slots[i])) slots[i] = null; else seen.add(slots[i]); } }
+  const missing = server.filter((c) => !seen.has(c));
+  if (seen.size === 0 && missing.length) {          // first time: top row, in the server order
+    missing.forEach((c, i) => { slots[i < COLS ? i : i] = c; });
+  } else {
+    for (const c of missing) {                      // a new tile: first free slot in the bottom row, else anywhere
+      let i = slots.findIndex((x, k) => x == null && k >= COLS);
+      if (i < 0) i = slots.findIndex((x) => x == null);
+      slots[i] = c;
+    }
+  }
+  hand = slots.filter((x) => x != null);
+  saveRackLocal();
+}
+
+// a group = tiles next to each other in one row with no empty slot between them
+function groupsOnRack() {
+  const out = [];
+  for (let r = 0; r < ROWS; r++) {
+    let cur = [];
+    for (let c = 0; c <= COLS; c++) {
+      const t = c < COLS ? slots[r * COLS + c] : null;
+      if (t != null) cur.push({ t, i: r * COLS + c });
+      else if (cur.length) { out.push(cur); cur = []; }
+    }
+  }
+  return out;
+}
+// is one group a legal set or run (same rules as the server)
+function validGroup(ts) {
+  if (ts.length < 3) return false;
+  const real = ts.filter((t) => !Cards.isJoker(t));
+  if (real.length < 2) return false;
+  const nums = real.map(Cards.rankOf), cols = real.map(Cards.suitOf);
+  if (ts.length <= 4 && nums.every((n) => n === nums[0]) && new Set(cols).size === cols.length) return true;   // set
+  if (!cols.every((c) => c === cols[0])) return false;                                                          // run
+  // run in the order the player placed them (left to right)
+  let start = null;
+  for (let k = 0; k < ts.length; k++) if (!Cards.isJoker(ts[k])) { start = Cards.rankOf(ts[k]) - k; break; }
+  if (start < 1 || start + ts.length - 1 > 13) return false;
+  return ts.every((t, k) => Cards.isJoker(t) || Cards.rankOf(t) === start + k);
+}
+
+function layoutRack() {
+  const W = Math.min(innerWidth - 16, 1200);
+  const gap = Math.max(3, Math.round(W / 250));
+  let tw = Math.floor((W - 20 - gap * (COLS - 1)) / COLS);
+  const maxTh = Math.floor((innerHeight * (innerHeight < 500 ? 0.47 : 0.42) - 34) / ROWS) - 14;   // rack ≈ 45% of the screen height
+  tw = Math.min(tw, Math.floor(maxTh / 1.333), 92);
+  const th = Math.round(tw * 1.333), rowH = th + 14;
+  geom = { tw, th, gap, padX: Math.round((W - (tw * COLS + gap * (COLS - 1))) / 2), padY: 8, rowH, W };
+  const root = document.documentElement.style;
+  root.setProperty('--tw', tw + 'px'); root.setProperty('--rackW', W + 'px'); root.setProperty('--rowH', rowH + 'px');
+  root.setProperty('--rackH', (rowH * ROWS + 12) + 'px');
+}
+function slotXY(i) {
+  const r = Math.floor(i / COLS), c = i % COLS;
+  return { x: geom.padX + c * (geom.tw + geom.gap), y: geom.padY + r * geom.rowH };
+}
+function slotAt(px, py) {     // px, py relative to the rack
+  const c = Math.round((px - geom.padX - geom.tw / 2) / (geom.tw + geom.gap));
+  const r = Math.round((py - geom.padY - geom.th / 2) / geom.rowH);
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
+  return r * COLS + c;
+}
+
 function renderHand() {
   if (dragging) return;
+  layoutRack();
   const box = $('hand'); box.innerHTML = '';
   if (!G || G.me == null) return;
-  // tiles sit side by side on the rack (no overlap) — size them to fit the screen
-  const maxW = Math.min(innerWidth - 24, 1100), gap = 3, cnt = Math.max(hand.length, 14);
-  const cw = Math.max(36, Math.min(innerHeight <= 460 ? 52 : 66, Math.floor((maxW - 16) / cnt) - gap));
-  const step = cw + gap;
-  const total = step * hand.length - gap;
-  document.documentElement.style.setProperty('--tw', cw + 'px');
-  box.style.width = Math.max(total, step * 14) + 16 + 'px';
-  hand.forEach((c, i) => {
+  // the two shelves
+  for (let r = 0; r < ROWS; r++) {
+    const sh = document.createElement('div'); sh.className = 'shelf'; sh.style.top = (geom.padY + r * geom.rowH + geom.th - 2) + 'px';
+    box.appendChild(sh);
+  }
+  // green line under groups that are already a legal set or run
+  for (const g of groupsOnRack()) {
+    if (!validGroup(g.map((x) => x.t))) continue;
+    const a = slotXY(g[0].i), b = slotXY(g[g.length - 1].i);
+    const ok = document.createElement('div'); ok.className = 'okline';
+    Object.assign(ok.style, { left: a.x + 'px', top: (a.y + geom.th + 2) + 'px', width: (b.x - a.x + geom.tw) + 'px' });
+    box.appendChild(ok);
+  }
+  slots.forEach((c, i) => {
+    if (c == null) return;
+    const p = slotXY(i);
     const el = document.createElement('div');
     el.className = 'card' + (c === selected ? ' sel' : '') + (newCards.has(c) ? ' new' : '');
     el.style.backgroundImage = `url(${Cards.faceURL(c)})`;
-    el.style.left = 8 + i * step + 'px'; el.style.zIndex = i + 1;
+    el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
     el.dataset.c = c;
-    attachCard(el, c, i, step);
+    attachCard(el, c, i);
     box.appendChild(el);
   });
   const db_ = $('discardBtn');
   if (selected != null && G.turn === G.me && G.phase === 'discard') {
-    const i = hand.indexOf(selected);
-    const r = box.getBoundingClientRect();
+    const i = slots.indexOf(selected), p = slotXY(i), r = box.getBoundingClientRect();
     db_.classList.remove('hidden');
-    db_.style.left = (r.left + 8 + i * step + cw / 2) + 'px';
-    db_.style.bottom = (innerHeight - r.top + 30) + 'px';
+    db_.style.left = (r.left + p.x + geom.tw / 2) + 'px';
+    db_.style.top = (r.top + p.y - 46) + 'px';
   } else db_.classList.add('hidden');
 }
 
 let orderTimer;
 function saveOrder() {
+  hand = slots.filter((x) => x != null);
+  saveRackLocal();
   clearTimeout(orderTimer);
-  orderTimer = setTimeout(() => { rpc('rummy_hand_order', { p_game: gameId, p_cards: hand }).catch(() => {}); }, 500);
+  orderTimer = setTimeout(() => { rpc('rummy_hand_order', { p_game: gameId, p_cards: hand }).catch(() => {}); }, 600);
 }
 
-function attachCard(el, c, index, step) {
-  let sx = 0, sy = 0, moved = false, startLeft = 0, pid = null;
+function overPile(x, y) {
+  const r = $('pileBtn').getBoundingClientRect();
+  return x > r.left - 30 && x < r.right + 30 && y > r.top - 30 && y < r.bottom + 30;
+}
+
+function attachCard(el, c, from) {
+  let sx = 0, sy = 0, moved = false, ox = 0, oy = 0, pid = null;
   el.addEventListener('pointerdown', (ev) => {
-    pid = ev.pointerId; sx = ev.clientX; sy = ev.clientY; startLeft = parseFloat(el.style.left); moved = false;
+    pid = ev.pointerId; sx = ev.clientX; sy = ev.clientY; moved = false;
+    ox = parseFloat(el.style.left); oy = parseFloat(el.style.top);
     el.setPointerCapture(pid);
   });
   el.addEventListener('pointermove', (ev) => {
     if (pid !== ev.pointerId) return;
-    const dx = ev.clientX - sx;
-    if (!moved && Math.abs(dx) + Math.abs(ev.clientY - sy) > 10) { moved = true; dragging = true; el.classList.add('drag'); }
-    if (moved) el.style.left = startLeft + dx + 'px';
+    const dx = ev.clientX - sx, dy = ev.clientY - sy;
+    if (!moved && Math.abs(dx) + Math.abs(dy) > 8) { moved = true; dragging = true; el.classList.add('drag'); newCards.delete(c); }
+    if (moved) {
+      el.style.left = ox + dx + 'px'; el.style.top = oy + dy + 'px';
+      const canThrow = G && G.turn === G.me && G.phase === 'discard';
+      $('pileBtn').classList.toggle('drop', canThrow && overPile(ev.clientX, ev.clientY));
+    }
   });
   const end = (ev) => {
     if (pid !== ev.pointerId) return; pid = null;
-    if (moved) {
-      dragging = false; el.classList.remove('drag');
-      const to = Math.max(0, Math.min(hand.length - 1, Math.round((parseFloat(el.style.left) - 8) / (step || 1))));
-      if (to !== index) { hand.splice(index, 1); hand.splice(to, 0, c); saveOrder(); }
-      renderHand();
-    } else onCardTap(c);
+    if (!moved) { onCardTap(c); return; }
+    dragging = false; el.classList.remove('drag'); $('pileBtn').classList.remove('drop');
+    // dropped on the open pile = throw it (only on my turn after drawing)
+    if (G && G.turn === G.me && G.phase === 'discard' && overPile(ev.clientX, ev.clientY)) { discard(c); return; }
+    const to = slotAt(parseFloat(el.style.left) + geom.tw / 2, parseFloat(el.style.top) + geom.th / 2);
+    if (to >= 0 && to !== from) {
+      const other = slots[to];
+      slots[to] = c; slots[from] = other;          // empty slot: move; full slot: swap
+      SFX.play('click'); saveOrder();
+    }
+    renderHand();
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', (ev) => { if (pid === ev.pointerId) { pid = null; dragging = false; el.classList.remove('drag'); renderHand(); } });
@@ -530,9 +644,12 @@ function attachCard(el, c, index, step) {
 function onCardTap(c) {
   SFX.unlock();
   newCards.delete(c);
-  if (!G || G.status !== 'playing') return;
-  if (G.turn !== G.me) { toast('חכה לתור שלך — בינתיים אפשר לסדר את האבנים'); return; }
-  if (G.phase === 'draw') { toast('קודם שולפים אבן מהקופה או את האבן הפתוחה'); return; }
+  if (!G || G.status !== 'playing') { renderHand(); return; }
+  if (G.turn !== G.me || G.phase === 'draw') {
+    // outside the throwing moment a tap just picks the tile up for moving — show how
+    toast(G.turn !== G.me ? 'גרור אבנים כדי לסדר את הכן — בינתיים זה לא התור שלך' : 'קודם שולפים אבן מהקופה או את האבן הפתוחה');
+    renderHand(); return;
+  }
   if (selected === c) { discard(c); return; }
   selected = c; SFX.play('click'); renderHand();
 }
@@ -554,15 +671,48 @@ function draw(src) {
 }
 function discard(c) {
   if (!G || G.turn !== G.me || G.phase !== 'discard') return;
-  selected = null; hand = hand.filter((x) => x !== c); renderHand();
+  selected = null; const i = slots.indexOf(c); if (i >= 0) slots[i] = null; saveRackLocal();
+  hand = slots.filter((x) => x != null); renderHand();
   act('rummy_discard', { p_card: c, p_seq: G.seq });
+}
+// closing is the player's own call: he picks the tile to throw and says "close"; the server checks the other 14
+function closeHand() {
+  if (!G || G.turn !== G.me || G.phase !== 'discard') return;
+  if (selected == null) { toast('בחר את האבן שאתה זורק, ואז לחץ סגירה'); return; }
+  const c = selected;
+  act('rummy_close', { p_card: c, p_seq: G.seq });
 }
 $('deckBtn').onclick = () => draw('deck');
 $('pileBtn').onclick = () => draw('pile');
 $('discardBtn').onclick = () => { if (selected != null) discard(selected); };
-$('closeBtn').onclick = () => { if (G && G.close_card != null) act('rummy_close', { p_card: G.close_card, p_seq: G.seq }); };
-$('sortSuit').onclick = () => { hand = Cards.sortBySuit(hand); renderHand(); saveOrder(); };
-$('sortRank').onclick = () => { hand = Cards.sortByRank(hand); renderHand(); saveOrder(); };
+$('closeBtn').onclick = closeHand;
+function arrange(sorted, key) {
+  // groups of the same colour / number stay together on one shelf, with an empty slot between groups
+  const groups = [];
+  for (const c of sorted) {
+    const k = key(c), last = groups[groups.length - 1];
+    if (last && last.k === k) last.t.push(c); else groups.push({ k, t: [c] });
+  }
+  const out = new Array(NSLOT).fill(null);
+  let row = 0, col = 0;
+  for (const g of groups) {
+    let need = g.t.length;
+    if (col > 0 && col + need > COLS && need <= COLS && row + 1 < ROWS) { row++; col = 0; }
+    for (const c of g.t) {
+      if (col >= COLS) { row = Math.min(ROWS - 1, row + 1); col = 0; }
+      while (out[row * COLS + col] != null) { col++; if (col >= COLS) { row = (row + 1) % ROWS; col = 0; } }
+      out[row * COLS + col] = c; col++;
+    }
+    col++;                                     // gap after the group
+    if (col >= COLS && row + 1 < ROWS) { row++; col = 0; }
+  }
+  // anything that did not fit (very rare) goes to any free slot
+  const placed = new Set(out.filter((x) => x != null));
+  for (const c of sorted) if (!placed.has(c)) out[out.indexOf(null)] = c;
+  slots = out; selected = null; saveOrder(); renderHand();
+}
+$('sortSuit').onclick = () => arrange(Cards.sortBySuit(hand), (c) => Cards.suitOf(c));
+$('sortRank').onclick = () => arrange(Cards.sortByRank(hand), (c) => Cards.rankOf(c));
 $('resumeBtn').onclick = () => act('rummy_resume', {});
 
 // menu

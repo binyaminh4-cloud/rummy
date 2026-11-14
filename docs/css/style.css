@@ -126,24 +126,30 @@ label { display: block; margin-bottom: 12px; font-weight: 600; }
 #awayBar { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); background: rgba(120, 30, 20, .85); padding: 8px 12px;
   border-radius: 14px; font-weight: 700; display: flex; gap: 10px; align-items: center; }
 
-#handWrap { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 10px calc(6px + env(safe-area-inset-bottom)); }
-#handTools { display: flex; justify-content: center; gap: 8px; margin-bottom: 6px; align-items: center; }
-#closeBtn { font-size: 18px; padding: 8px 22px; }
-/* my wooden rack */
-:root { --tw: 64px; }
-#hand { position: relative; height: calc(var(--tw) * 1.333 + 22px); margin: 0 auto; direction: ltr; border-radius: 10px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.6); }
-#hand::before { content: ''; position: absolute; inset: 0; border-radius: 10px;
-  background: linear-gradient(rgba(255,226,180,.18), rgba(0,0,0,.25)), url(../assets/img/wood.webp) center/240px;
-  filter: saturate(.75) brightness(1.55) sepia(.25);
-  box-shadow: inset 0 3px 0 rgba(255,255,255,.25), inset 0 -10px 0 rgba(0,0,0,.25); }
-.card { position: absolute; bottom: 12px; width: var(--tw); height: calc(var(--tw) * 1.333); border-radius: calc(var(--tw) * .12);
-  background-size: cover; cursor: grab;
-  box-shadow: 0 3px 0 #c9b384, 0 5px 0 #a8915f, 0 8px 12px rgba(0,0,0,.45); transition: transform .18s, left .18s, bottom .18s; touch-action: none; user-select: none; }
-.card.sel { bottom: 30px; box-shadow: 0 0 0 3px var(--gold), 0 3px 0 #c9b384, 0 12px 22px rgba(0,0,0,.6); }
+#handWrap { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 8px calc(4px + env(safe-area-inset-bottom)); }
+#handTools { display: flex; justify-content: center; gap: 8px; margin: 0 auto 5px; align-items: center; width: var(--rackW, 100%); }
+#handTools .tip { flex: 1; text-align: center; font-size: 12px; color: var(--muted); text-shadow: 0 1px 3px #000; }
+#closeBtn { font-size: 16px; padding: 7px 18px; }
+/* my wooden rack: two shelves, like a real rummy stand */
+:root { --tw: 50px; --rackW: 100%; --rowH: 80px; --rackH: 172px; }
+#stage { bottom: calc(var(--rackH) + 40px) !important; height: auto !important; }
+#hand { position: relative; width: var(--rackW); height: var(--rackH); margin: 0 auto; direction: ltr; border-radius: 12px 12px 6px 6px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.7); touch-action: none; }
+#hand::before { content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(rgba(255,226,180,.16), rgba(0,0,0,.2)), url(../assets/img/wood.webp) center/260px;
+  filter: saturate(.7) brightness(1.6) sepia(.3);
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.3), inset 0 -6px 0 rgba(0,0,0,.25); }
+.shelf { position: absolute; left: 4px; right: 4px; height: 12px; border-radius: 3px;
+  background: linear-gradient(#c79a62, #8a6234); box-shadow: 0 3px 6px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.35); }
+.okline { position: absolute; height: 4px; border-radius: 2px; background: #5fe0a4; box-shadow: 0 0 8px #5fe0a4; z-index: 2; pointer-events: none; }
+.card { position: absolute; width: var(--tw); height: calc(var(--tw) * 1.333); border-radius: calc(var(--tw) * .13);
+  background-size: cover; cursor: grab; z-index: 3;
+  box-shadow: 0 3px 0 #c9b384, 0 5px 0 #a8915f, 0 8px 12px rgba(0,0,0,.45); transition: transform .15s, top .15s, left .15s; touch-action: none; user-select: none; }
+.card.sel { transform: translateY(-10px); box-shadow: 0 0 0 3px var(--gold), 0 3px 0 #c9b384, 0 12px 22px rgba(0,0,0,.6); }
 .card.new { box-shadow: 0 0 0 3px #8fe3c7, 0 3px 0 #c9b384, 0 8px 12px rgba(0,0,0,.45); }
-.card.drag { transition: none; z-index: 99; cursor: grabbing; bottom: 34px; }
-#discardBtn { position: absolute; transform: translateX(-50%); }
+.card.drag { transition: none; z-index: 99; cursor: grabbing; transform: scale(1.12); box-shadow: 0 16px 28px rgba(0,0,0,.6); }
+#pileBtn.drop { box-shadow: 0 0 0 4px #ff9f6a, 0 0 30px #ff9f6a !important; }
+#discardBtn { position: absolute; transform: translateX(-50%); z-index: 6; }
 
 .overlay { position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 12px; }
 #rotate { display: none; font-size: 22px; font-weight: 700; background: #0b1511; }
@@ -167,6 +173,8 @@ label { display: block; margin-bottom: 12px; font-weight: 600; }
   .rooms-panel { min-height: 300px; }
 }
 @media (max-height: 460px) {
+  #handTools .tip { display: none; }
+  #turnBanner { font-size: 13px; padding: 5px 12px; top: 8px; }
   #handTools .btn.small { padding: 5px 10px; font-size: 13px; }
   h1 { font-size: 26px; }
   .login-panel .logo { width: 64px; margin: 0; }

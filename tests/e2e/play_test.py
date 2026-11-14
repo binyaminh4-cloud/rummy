@@ -69,9 +69,6 @@ def play_turn(page):
         print("DRAW FAILED banner=", page.inner_text("#turnBanner"), "dbg=", page.evaluate("window.__rummyDebug()"))
         raise
     time.sleep(0.4)
-    if page.is_visible("#closeBtn"):
-        page.click("#closeBtn")
-        return "closed"
     for _ in range(5):
         try:
             page.locator("#hand .card").last.click(timeout=3000)
@@ -82,6 +79,22 @@ def play_turn(page):
         except Exception:
             time.sleep(0.4)
     return "failed"
+
+
+def play_turn_after_draw(page):
+    page.locator("#hand .card").last.click(timeout=3000); time.sleep(0.15)
+    if page.locator("#hand .card.sel").count():
+        page.locator("#hand .card.sel").click(timeout=3000)
+
+
+def drag(page, sel_from, to_xy):
+    b = page.locator(sel_from).bounding_box()
+    page.mouse.move(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2); page.mouse.down()
+    for k in range(1, 9):
+        page.mouse.move(b["x"] + b["width"] / 2 + (to_xy[0] - b["x"] - b["width"] / 2) * k / 8,
+                        b["y"] + b["height"] / 2 + (to_xy[1] - b["y"] - b["height"] / 2) * k / 8)
+        time.sleep(0.03)
+    page.mouse.up(); time.sleep(0.4)
 
 
 def ended(page):
@@ -133,6 +146,17 @@ def run():
         time.sleep(3)
         shot(alice, "07_game_alice"); shot(bob, "08_game_bob")
         assert alice.locator("#hand .card").count() in (14, 15), "alice hand size"
+        # free arranging: drag the first tile to the far right of the bottom shelf
+        first = alice.locator("#hand .card").first.get_attribute("data-c")
+        hb = alice.locator("#hand").bounding_box()
+        drag(alice, f"#hand .card[data-c='{first}']", (hb["x"] + hb["width"] - 30, hb["y"] + hb["height"] - 40))
+        nb = alice.locator(f"#hand .card[data-c='{first}']").bounding_box()
+        assert nb["y"] > hb["y"] + hb["height"] / 2 and nb["x"] > hb["x"] + hb["width"] * 0.8, f"drag did not move tile {nb}"
+        shot(alice, "07b_rack_dragged")
+        alice.reload(); alice.wait_for_selector("#game.show", timeout=15000)
+        wait_js(alice, "document.querySelectorAll('#hand .card').length > 0", timeout=20000); time.sleep(0.8)
+        nb2 = alice.locator(f"#hand .card[data-c='{first}']").bounding_box()
+        assert abs(nb2["x"] - nb["x"]) < 4 and abs(nb2["y"] - nb["y"]) < 4, "rack layout lost after refresh"
 
         # 2. play some turns online
         actions = 0
@@ -143,6 +167,13 @@ def run():
                 break
             for pg in (alice, bob):
                 if my_turn(pg) and "שלוף" in pg.inner_text("#turnBanner"):
+                    if actions == 2:
+                        pg.click("#deckBtn", force=True)
+                        wait_js(pg, "document.querySelectorAll('#hand .card').length === 15", timeout=10000)
+                        pb = pg.locator("#pileBtn").bounding_box()
+                        drag(pg, "#hand .card >> nth=0", (pb["x"] + pb["width"] / 2, pb["y"] + pb["height"] / 2))
+                        wait_js(pg, "document.querySelectorAll('#hand .card').length === 14", timeout=10000)
+                        actions += 1; continue
                     play_turn(pg); actions += 1
                     if actions == 3:
                         shot(pg, "09_after_discard")
@@ -175,9 +206,17 @@ def run():
         for _ in range(30):
             for pg in (alice, bob):
                 if my_turn(pg) and "שלוף" in pg.inner_text("#turnBanner"):
-                    pg.click("#deckBtn", force=True); time.sleep(1.2)
-                    if pg.is_visible("#closeBtn"):
+                    pg.click("#deckBtn", force=True); time.sleep(1.5)
+                    gid_now = sql("select max(id) from rummy_games")
+                    forced = sql(f"select cards[1:14] = '{{0,1,2,16,17,18,19,20,34,35,36,49,50,51}}' from rummy_players p join rummy_games g on g.id=p.game_id and p.seat=g.turn where g.id={gid_now}")
+                    if forced == "t" and pg.is_visible("#closeBtn"):
+                        # the player builds the groups himself: sort by colour, check the green lines, pick the drawn tile, close
+                        drawn = sql(f"select cards[15] from rummy_players p join rummy_games g on g.id=p.game_id and p.seat=g.turn where g.id={gid_now}")
+                        pg.click("#sortSuit"); time.sleep(0.6)
+                        pg.locator(f"#hand .card[data-c='{drawn}']").click(); time.sleep(0.4)
                         shot(pg, "11_close_ready"); pg.click("#closeBtn"); winner_page = pg
+                    elif pg.locator("#hand .card").count() == 15:
+                        play_turn_after_draw(pg)
             if winner_page:
                 break
             time.sleep(0.8)

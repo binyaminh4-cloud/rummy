@@ -235,8 +235,12 @@ export async function createTable(container) {
     renderer.setSize(w, h, false);
     const aspect = w / h; camera.aspect = aspect;
     // keep the whole table in view on narrow and wide screens
-    camera.fov = aspect >= 1.75 ? 38 : Math.min(70, 38 * 1.75 / aspect);
-    camera.position.set(0, 2.05, 1.72);
+    // the table area is a wide strip above the rack: look down more steeply and fit the table width
+    const wide = Math.min(1, Math.max(0, (aspect - 1.6) / 2.4));          // 0 = normal screen, 1 = very wide strip
+    camera.position.set(0, 2.05 + wide * 0.7, 1.72 - wide * 0.45);
+    const hfov = 84;                                                       // keep the whole table across the width
+    camera.fov = Math.min(70, Math.max(24, 2 * Math.atan(Math.tan(hfov * Math.PI / 360) / aspect) * 180 / Math.PI));
+    look.set(0, 0.6 + wide * 0.16, 0.12 - wide * 0.1);
     camera.lookAt(look);
     camera.updateProjectionMatrix();
     invalidate();
